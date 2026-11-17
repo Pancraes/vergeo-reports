@@ -96,7 +96,11 @@ def ingest_report(
         session.flush()  # INSERT reports now, so the events' FK target exists
         rows = _event_rows(report.id, parsed)
         if rows:
-            session.execute(insert(Event), rows)
+            # Core insert on the Table, not the ORM entity. ORM bulk INSERT leaves out None-valued
+            # keys so column defaults can apply, which splits rows into a separate batch per NULL
+            # pattern (er/subtag/alarm_id/build_sha vary line to line). Measured on the 8,508-event
+            # 2026-11-06 report: ORM = 1,404 statements, 38.5 s; Core = 1 batched executemany, 1.0 s.
+            session.execute(insert(Event.__table__), rows)
         session.commit()
     except IntegrityError:
         session.rollback()  # the failed transaction is unusable; start a fresh one for the read

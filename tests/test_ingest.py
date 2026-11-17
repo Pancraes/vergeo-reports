@@ -194,3 +194,33 @@ def test_concurrent_duplicate_uploads_store_exactly_one_report(monkeypatch):
     assert len({r.report.id for r in results}) == 1
     with SessionLocal() as s:
         assert counts(s)[0] == 1
+
+
+def test_events_are_inserted_in_one_batched_statement(db):
+    """Regression: ORM bulk insert split rows into one batch per NULL pattern (1,404 statements
+    and 38 s for the real 8,508-event report). The Core insert must send a single executemany."""
+    from sqlalchemy import event
+
+    from app.db import engine
+
+    # Vary which nullable columns are NULL from line to line, like real reports do.
+    lines = []
+    for i in range(300):
+        extra = ["|ID=a", "", "|alarm=b", ""][i % 4]
+        sub = "FIX|" if i % 3 == 0 else ""
+        lines.append(f"2026-11-06 17:00:00.000|er={i}|DIAG2|{sub}k={i}{extra}")
+    lines.insert(150, "==== VERGEO SESSION START 2026-11-06 17:00:00.000 ====")  # er NULL
+
+    executemany_calls = []
+
+    def count(conn, cursor, statement, params, context, executemany):
+        if statement.lstrip().upper().startswith("INSERT INTO EVENTS"):
+            executemany_calls.append(executemany)
+
+    event.listen(engine, "before_cursor_execute", count)
+    try:
+        result = ingest_report(db, build_report(lines=lines), max_bytes=LIMIT)
+    finally:
+        event.remove(engine, "before_cursor_execute", count)
+    assert result.report.event_count == 301
+    assert executemany_calls == [True]
