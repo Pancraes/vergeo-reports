@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local configuration and secrets. Copy .env.example to .env.
+.env
+
+# Real Vergeo reports never go in git: sanitized on-device, but a per-second
+# distance-to-destination timeline with timestamps is still a movement record.
+local_data/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

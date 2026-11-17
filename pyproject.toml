@@ -1,0 +1,23 @@
+[project]
+name = "vergeo-reports"
+version = "0.1.0"
+description = "Ingest and query API for Vergeo problem reports"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F: pycodestyle + pyflakes, I: import order, B: bugbear, UP: modern syntax.
+select = ["E", "F", "I", "B", "UP"]
+# FastAPI's Depends()/Query() in argument defaults is the framework's documented idiom.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff.lint.isort]
+# The local alembic/ migrations folder would otherwise make ruff treat the alembic package as ours.
+known-third-party = ["alembic"]
