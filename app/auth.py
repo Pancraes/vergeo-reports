@@ -51,3 +51,7 @@ def require_admin_key(
     key: str | None = Security(_admin_header), settings: Settings = Depends(get_settings)
 ) -> None:
     _check(key, settings.admin_api_key)
+
+
+# Documents the 401 on routes guarded by require_admin_key (OpenAPI cannot infer it).
+ADMIN_KEY_RESPONSES: dict[int | str, dict] = {401: {"description": "Missing or invalid admin key."}}

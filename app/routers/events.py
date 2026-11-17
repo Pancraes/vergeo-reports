@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..auth import require_admin_key
+from ..auth import ADMIN_KEY_RESPONSES, require_admin_key
 from ..db import get_db
 from ..models import Event, Report
 from ..schemas import EventOut, EventPage
@@ -20,7 +20,7 @@ from ..services.queries import (
 )
 from .common import require_device_local
 
-router = APIRouter(prefix="/events", tags=["events"])
+router = APIRouter(prefix="/events", tags=["events"], responses=ADMIN_KEY_RESPONSES)
 
 
 @router.get(

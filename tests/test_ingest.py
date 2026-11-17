@@ -197,8 +197,8 @@ def test_concurrent_duplicate_uploads_store_exactly_one_report(monkeypatch):
 
 
 def test_events_are_inserted_in_one_batched_statement(db):
-    """Regression: ORM bulk insert split rows into one batch per NULL pattern (1,404 statements
-    and 38 s for the real 8,508-event report). The Core insert must send a single executemany."""
+    """Regression: ORM bulk insert split rows into one batch per NULL pattern (1,403 executions,
+    about 39 s, for the real 8,508-event report). The Core insert must send one executemany."""
     from sqlalchemy import event
 
     from app.db import engine

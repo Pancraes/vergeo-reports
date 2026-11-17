@@ -84,6 +84,17 @@ def test_openapi_documents_every_endpoint(client):
     assert client.get("/docs").status_code == 200
 
 
+def test_openapi_documents_the_key_and_401_on_every_guarded_operation(client):
+    paths = client.get("/openapi.json").json()["paths"]
+    operations = [(p, m, op) for p, ops in paths.items() for m, op in ops.items() if p != "/health"]
+    assert len(operations) == 7  # plus /health: the 8 endpoints
+    for path, method, op in operations:
+        expected = "IngestKey" if (path, method) == ("/reports", "post") else "AdminKey"
+        assert op["security"] == [{expected: []}], (path, method)
+        assert "401" in op["responses"], (path, method)
+    assert "security" not in paths["/health"]["get"]
+
+
 def test_models_and_migrations_have_not_drifted():
     """Fails if app/models.py changed without a new Alembic migration."""
     command.check(alembic_config())

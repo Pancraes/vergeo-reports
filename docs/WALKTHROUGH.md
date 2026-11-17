@@ -134,8 +134,8 @@ r.app, r.env, len(r.events), r.warnings[:3], r.events[0]
   row exists for the events' foreign key). `commit` makes the work permanent.
 - **`expire_on_commit=False`** keeps attribute values readable after commit, so the router can
   serialise the report without another `SELECT`.
-- **Why Core for events.** ORM bulk insert splits batches by NULL pattern (1,404 statements for
-  one real report). `insert(Event.__table__)` sends one `executemany`.
+- **Why Core for events.** ORM bulk insert splits batches by NULL pattern (1,403 cursor executions
+  for one real report). `insert(Event.__table__)` sends one `executemany`.
 
 ## 6. ORM models (`app/models.py`)
 

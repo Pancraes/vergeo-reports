@@ -1,0 +1,16 @@
+==== VERGEO PROBLEM REPORT ====
+APP|ver=1.9.0|code=44|debug=false|device=motorola moto g(7) play|api=29
+---- what the user reported ----
+Synthetic example report. Alarm rang about two minutes after the stop.
+ENV|fine=true|coarse=true|background=true|notif=n/a|battOptExempt=true|batterySaver=false|gpsProvider=true|networkProvider=true|network=false|wifi=false|cellular=false
+---- recent activity (sanitized, oldest first) ----
+2026-11-06 17:40:00.100|er=721000000|POSITIONING_HEALTH|at=JS_QUERY|activeNetwork=false|risk=HIGH|reason=GPS_ONLY_NO_DATA_NO_WIFI
+==== VERGEO SESSION START 2026-11-06 17:44:38.001 ====
+APP|ver=1.9.0|code=44|debug=false|device=motorola moto g(7) play|api=29
+ENV|fine=true|coarse=true|background=true|notif=n/a|battOptExempt=true|batterySaver=false|gpsProvider=true|networkProvider=true|network=false|wifi=false|cellular=false
+2026-11-06 17:44:39.589|er=721766341|TEST_SESSION_START|alarm=00000000-0000-4000-8000-000000000001|ver=1.9.0|code=44|gitSha=c567346|at=1793403879589
+2026-11-06 17:45:12.000|er=721799000|DIAG2|FIX|t=1793403912000|prov=gps|acc=17.152|spd=12.58
+2026-11-06 18:13:57.718|er=723500000|TRIGGER_ALLOWED|ID=00000000-0000-4000-8000-000000000001|path=ARRIVAL|dist=1982|rad=2090|ef=-
+2026-11-06 18:14:03.881|er=723506000|BLIND_HOP_CANDIDATE|ID=00000000-0000-4000-8000-000000000001|tier=blind_motion|paceMps=7.4|tier=blind_motion|reason=
+2026-11-06 18:14:04.000|er=723507000|AUDIO_STOP|source=STOP_ALL|LOCKSCREEN_HOLD
+==== REPORT COMPLETE | diagnostics=true | lines=9 | window_truncated=false ====

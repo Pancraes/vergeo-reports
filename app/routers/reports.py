@@ -18,7 +18,7 @@ from fastapi import (
 from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session, undefer
 
-from ..auth import require_admin_key, require_ingest_key
+from ..auth import ADMIN_KEY_RESPONSES, require_admin_key, require_ingest_key
 from ..config import Settings, get_settings
 from ..db import get_db
 from ..models import Event, Report, ReportStatus
@@ -35,7 +35,8 @@ from ..services.queries import (
 from ..services.triage import InvalidTransition, InvalidTriage, apply_triage
 from .common import require_device_local
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+# POST /reports overrides the 401 entry with the ingest-key wording.
+router = APIRouter(prefix="/reports", tags=["reports"], responses=ADMIN_KEY_RESPONSES)
 
 _422 = status.HTTP_422_UNPROCESSABLE_CONTENT
 

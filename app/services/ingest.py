@@ -99,8 +99,8 @@ def ingest_report(
             # Core insert on the Table, not the ORM entity. ORM bulk INSERT leaves out None-valued
             # keys so column defaults can apply, which splits rows into a separate batch per NULL
             # pattern (er/subtag/alarm_id/build_sha vary line to line). Measured on the
-            # 8,508-event 2026-11-06 report: ORM = 1,404 statements, 38.5 s; Core = one batched
-            # executemany, 1.0 s.
+            # 8,508-event 2026-11-06 report (scripts/bench_event_insert.py): ORM = 1,403 cursor
+            # executions, about 38.7 s; Core = one batched executemany, about 1.1 s.
             session.execute(insert(Event.__table__), rows)
         session.commit()
     except IntegrityError:

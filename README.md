@@ -1,9 +1,13 @@
 # vergeo-reports
 
-An ingest and query API for problem reports from **Vergeo**, my location-based alarm app for
-Android. It replaces a manual workflow: until now, a field-test problem produced a 0.5-2 MB text
-report sent by email, and diagnosing it meant grepping thousands of `TAG|key=value` lines by hand
-and rebuilding the timeline in a Markdown table.
+[![CI](https://github.com/Pancraes/vergeo-reports/actions/workflows/ci.yml/badge.svg)](https://github.com/Pancraes/vergeo-reports/actions/workflows/ci.yml)
+
+An ingest and query API for problem reports from **Vergeo**, my Android alarm app that rings when
+you get close to a destination, including on transit where GPS drops out. When a ride goes wrong
+(the alarm rang early, late, or not at all), the app's "report a problem" screen produces a
+0.5-2 MB text report: the user's description plus the app's recent diagnostic log. Until now that
+report was sent by email, and diagnosing it meant grepping thousands of `TAG|key=value` lines by
+hand and rebuilding the timeline in a Markdown table.
 
 This service stores each report byte for byte, parses it into indexed events in PostgreSQL, and
 answers the questions I was grepping for:
@@ -15,9 +19,21 @@ GET /events?tag=TRIGGER_ALLOWED&field=reason:TIME_BACKSTOP    every time-backsto
 GET /reports/{id}/events?tag=TRIGGER_ALLOWED&tag=AUDIO_STOP&from=2026-11-06T15:00:00
 ```
 
-Status: core complete and tested locally. The 11 historical Vergeo reports (31,361 events) ingest
-with zero parse warnings. Not deployed, and the Android app does not upload to it yet; reports
-are loaded with `scripts/backfill.py` or `curl`.
+Status: core complete and tested. The 11 historical Vergeo reports (31,361 events) ingest with
+zero parse warnings. Not deployed, and the Android app does not upload to it yet; reports are
+loaded with `scripts/backfill.py` or `curl`. The real reports contain personal travel data, so
+they are not in this repository; the tests and `examples/sample_report.txt` are synthetic, in the
+same format.
+
+## Why batch ingest, not live telemetry
+
+A report is a deliberate, user-initiated snapshot: the user decides something went wrong and
+sends the last few hours of log as one file. The questions are forensic ("what did the app decide
+at 18:13, and why"), asked after the fact and across several reports. So the unit of ingest is
+the whole report, stored as one transaction, with the raw file kept as evidence. Live telemetry
+(streaming every log line from every phone) would need a different design: a queue, sampling,
+and consent and battery budgets on the device. It would also collect location-adjacent data
+continuously instead of only when a user chooses to share it.
 
 ## Architecture
 
@@ -48,6 +64,8 @@ app/
   routers/           health.py, reports.py, events.py
 alembic/versions/    0001_initial_reports_and_events.py
 scripts/backfill.py  load the Vergeo repo's incidents/ reports
+scripts/bench_event_insert.py   ORM vs Core event-insert measurement (see Performance)
+examples/            sample_report.txt, a synthetic report to upload
 tests/               pytest against real PostgreSQL
 docs/                WALKTHROUGH.md
 ```
@@ -65,7 +83,16 @@ docker compose up --build
 - Without a `.env`, the keys are `dev-ingest-key` / `dev-admin-key`. Those are public development
   values: set real ones before exposing the port anywhere.
 
-Load the historical reports into the running stack (the Vergeo repo is a sibling folder):
+Upload the synthetic example and query it:
+
+```bash
+curl -H "X-API-Key: dev-ingest-key" -F file=@examples/sample_report.txt http://localhost:8000/reports
+curl -H "X-API-Key: dev-admin-key" "http://localhost:8000/events?tag=TRIGGER_ALLOWED&field=path:ARRIVAL"
+```
+
+Uploading the same file again returns 200 with the same report instead of a second copy.
+
+Load the historical reports, if you have the (private) Vergeo repo as a sibling folder:
 
 ```bash
 for f in ../Vergeo/incidents/*/raw/problem_report*.txt; do
@@ -305,7 +332,7 @@ with `EXPLAIN ANALYZE` at that point, not assumed.
 
 A value gets a real column when it is on nearly every row, filtered or sorted on often, and
 stably typed: timestamp, `er`, tag, subtag, alarm, build. Everything else goes in `fields`. The
-historical reports contain 125 tags with different keys, and the app adds log lines almost
+historical reports contain 125 app-logged tags with different keys, and the app adds log lines almost
 weekly, so a column per key would need a migration per log line.
 
 Costs I accept: JSONB is schema-less, so a typo in a filter key matches nothing instead of
@@ -375,6 +402,25 @@ Rough order, driven by what would actually break:
 4. **Read scaling**: a read replica for `/events` queries.
 5. **API versioning**: a `/v1` prefix once there is a second client to keep compatible.
    Additive changes (new fields, new filters) are not breaking.
+
+## Performance
+
+The one bottleneck found so far was the event insert. Measured with
+`scripts/bench_event_insert.py` on the largest historical report (2,097,454 bytes, 8,508 events;
+Windows 11 laptop, Python 3.12 on Windows, PostgreSQL 16 in Docker under WSL2 over a localhost
+port; 3 runs each):
+
+| Event insert | Ingest time | Cursor executions |
+|---|---|---|
+| ORM `insert(Event)` | 38.6-38.8 s | 1,403 (787 of them `executemany`) |
+| Core `insert(Event.__table__)` | 1.09-1.15 s | 3 (1 `executemany`) |
+
+ORM bulk `INSERT` omits `None`-valued keys so column defaults can apply, which groups rows into a
+separate batch per NULL pattern; `er`, `subtag`, `alarm_id` and `build_sha` are NULL on
+different lines. The Core statement sends every row with every column, in one batch. The absolute
+times include the WSL2 port-forward latency (roughly 27 ms per execution); the statement count is
+the part that carries over to other machines. Parsing the same report takes about 0.2 s.
+`test_events_are_inserted_in_one_batched_statement` fails if the batching regresses.
 
 ## Development notes
 

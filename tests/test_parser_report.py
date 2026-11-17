@@ -1,6 +1,7 @@
 """Document structure: app/parser/report.py. Pure functions, no database."""
 
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -222,3 +223,11 @@ def test_required_structure_errors(raw, message):
     with pytest.raises(ReportFormatError) as exc:
         parse_report(raw)
     assert message in str(exc.value)
+
+
+def test_example_report_in_the_readme_parses_cleanly():
+    """examples/sample_report.txt is what the README tells a new user to upload."""
+    raw = (Path(__file__).parent.parent / "examples" / "sample_report.txt").read_bytes()
+    r = parse_report(raw)
+    assert (r.warning_count, r.trailer is not None, len(r.events)) == (0, True, 7)
+    assert {e.build_sha for e in r.events} == {None, "c567346"}
