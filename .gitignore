@@ -17,3 +17,6 @@ local_data/
 .vscode/
 .idea/
 .DS_Store
+
+# Local notes that are not project documentation.
+notes/
