@@ -81,6 +81,12 @@ def test_bash_paths_outside_the_worktree_are_denied():
     assert not check_tool_call("Bash", {"command": "type C:\\Users\\me\\secrets.txt"}, ROOT)[0]
 
 
+def test_a_windows_path_is_outside_a_posix_checkout(monkeypatch):
+    monkeypatch.setattr(fix.os, "name", "posix")
+    assert not fix._inside("C:\\Users\\me\\secrets.txt", Path("/work/wt"))
+    assert not fix._inside("c:/Users/me", Path("/work/wt"))
+
+
 @pytest.mark.parametrize(
     "args",
     [

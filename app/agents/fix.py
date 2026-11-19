@@ -90,6 +90,10 @@ ALLOWED_TOOLS = FILE_TOOLS | {"Bash", "TodoWrite"}
 
 
 def _inside(path: str, root: Path) -> bool:
+    # On POSIX "C:\Users\x" is a relative name and would be joined under the root, so a Windows
+    # absolute path is never inside a POSIX checkout (CI caught this on Linux).
+    if os.name != "nt" and re.match(r"[A-Za-z]:[\\/]", path):
+        return False
     try:
         p = Path(path)
         p = p if p.is_absolute() else root / p
