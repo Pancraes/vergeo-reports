@@ -25,6 +25,15 @@ loaded with `scripts/backfill.py` or `curl`. The real reports contain personal t
 they are not in this repository; the tests and `examples/sample_report.txt` are synthetic, in the
 same format.
 
+On top of the store sits an agent layer (`app/agents/`, see [docs/AGENTS.md](docs/AGENTS.md)):
+- **Triage agent.** Investigates one report plus the rider's lap notes through narrow read-only
+  tools. It returns a schema-validated incident analysis that is checked against facts computed
+  from the log.
+- **Fix agent.** Runs only for a log-supported defect. It works in an isolated worktree and must
+  write a failing replay test before the fix. A deterministic validator gates the candidate; it
+  is never merged or installed automatically.
+- **Evaluation.** Both are measured against hand-labelled historical rides.
+
 ## Why batch ingest, not live telemetry
 
 A report is a deliberate, user-initiated snapshot: the user decides something went wrong and

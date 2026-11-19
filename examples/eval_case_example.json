@@ -1,0 +1,25 @@
+{
+ "cases": [
+  {
+   "id": "synthetic-sb-blackout",
+   "report": "examples/sample_report.txt",
+   "from": "2026-11-06 17:40:00",
+   "to": "2026-11-06 18:20:00",
+   "ride_date": "2026-11-06",
+   "focus": "the evening ride in the sample report",
+   "notes": "lap started 17:44, train moved 47 seconds later, doors 33 minutes after that",
+   "note_written_at": null,
+   "expected": {
+    "verdicts": ["late_due_to_complete_blackout"],
+    "trigger_path": "ARRIVAL",
+    "direction": "late",
+    "blackout": true,
+    "failure_class": ["known_limit"],
+    "doors_phone": "2026-11-06 18:17:47",
+    "doors_uncertainty_s": 15,
+    "early_late_s": null
+   },
+   "label_source": "synthetic example of the format; real cases cite the FIELD_CORPUS section or incident note they come from"
+  }
+ ]
+}
