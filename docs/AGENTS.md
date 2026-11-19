@@ -120,7 +120,9 @@ It does not pretend:
 `rules.check()` compares the answer with facts computed without the model:
 - `trigger_path` must equal what the ringing `TRIGGER_ALLOWED` line says;
 - `alarm_time` must be the logged ring;
-- `blackout_duration_s` must be close to the longest location gap;
+- `blackout_duration_s` must match some location gap in the window (within max(120 s, 10%)),
+  counting the open gap that ends at the ring; a session can hold idle gaps before the ride, so
+  the claim need not be the longest one;
 - early / late must agree with the sign of `early_late_seconds`;
 - a success needs a ring;
 - `late_due_to_complete_blackout` needs a real blackout, and is not a defect without a hypothesis;
@@ -178,6 +180,14 @@ Results: see "Measured results" below.
 1. **Worktree.** `git worktree add -b fix-agent/<id>` at the base, beside the main checkout.
    `local.properties` is copied, and `node_modules` is junctioned read-only for the Capacitor
    modules.
+   - **`--backtest` uses a separate repository, not a worktree.** A worktree shares refs and
+     objects with the main checkout, so `git log --all` shows the later human fix. The first
+     backtest found it there and closed the case as a duplicate without writing anything. A
+     backtest now runs `git init` and fetches only the base commit and its ancestors, with no
+     remote, so later commits are unreachable (tested).
+   - **Discarding.** Remove the `node_modules` junction first (`cmd /c rmdir <dir>\node_modules`
+     on Windows), then the directory or `git worktree remove`. Deleting recursively through a
+     junction reaches the main checkout's modules.
 2. **Policy.** `check_tool_call()` gates every tool call. It is wired as both the SDK permission
    callback and a PreToolUse hook, and nothing is pre-approved. It denies:
    - git push / merge / rebase / pull / reset --hard / checkout of a shared branch / branch

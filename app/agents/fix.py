@@ -137,7 +137,19 @@ _GIT_READ = {"rev-parse", "rev-list", "log", "diff", "show", "status", "ls-files
 
 def _git(repo: Path, *args: str, check: bool = True) -> str:
     sub = args[0]
-    if sub == "worktree":
+    if sub == "init":
+        if args[1:2] != ("-q",) or len(args) != 3:
+            raise PermissionError("only 'git init -q <dir>' is allowed")
+    elif sub == "fetch":
+        # Backtest only: one commit from a local repository into a new fix-agent branch.
+        if not (
+            len(args) == 5
+            and args[1:3] == ("-q", "--no-tags")
+            and Path(args[3]).is_dir()
+            and re.fullmatch(r"[0-9a-f]{40}:refs/heads/fix-agent/[\w-]+", args[4])
+        ):
+            raise PermissionError(f"git fetch {' '.join(args[1:])} is not allowed")
+    elif sub == "worktree":
         if args[1:2] != ("add",):
             raise PermissionError("only 'git worktree add' is allowed")
     elif sub == "checkout":
@@ -198,6 +210,23 @@ def create_worktree(
     path = parent / f"{repo.name}-fixagent-{fix_id}"
     branch = f"fix-agent/{fix_id}"
     _git(repo, "worktree", "add", "-b", branch, str(path), base_sha)
+    return Worktree(path=path, branch=branch, base=base_sha)
+
+
+def create_backtest_clone(
+    repo: Path, fix_id: str, base: str, parent: Path | None = None
+) -> Worktree:
+    """A backtest must not see its own answer. A worktree shares the object store and refs, so
+    `git log --all` shows the later human fix (the first 11-15 backtest found c567346 there and
+    closed the case as a duplicate). A new repository holding only the base commit and its
+    ancestors, with no remote, hides every later commit."""
+    base_sha = _git(repo, "rev-parse", base).strip()
+    parent = parent or repo.parent
+    path = parent / f"{repo.name}-backtest-{fix_id}"
+    branch = f"fix-agent/{fix_id}"
+    _git(parent, "init", "-q", str(path))
+    _git(path, "fetch", "-q", "--no-tags", str(repo.resolve()), f"{base_sha}:refs/heads/{branch}")
+    _git(path, "checkout", branch)
     return Worktree(path=path, branch=branch, base=base_sha)
 
 
@@ -544,7 +573,8 @@ def main(argv: list[str] | None = None) -> int:
         print("triage did not ask for a fix investigation; nothing to do")
         return 0
     fix_id = f"{datetime.now():%m%d%H%M}-{uuid.uuid4().hex[:4]}"
-    wt = create_worktree(args.vergeo_repo, fix_id, args.base)
+    make = create_backtest_clone if args.backtest else create_worktree
+    wt = make(args.vergeo_repo, fix_id, args.base)
     prepare_android_build(args.vergeo_repo, wt.path)
     print(f"worktree {wt.path} on {wt.branch} at {wt.base[:10]}", file=sys.stderr)
     agent = asyncio.run(run_fix_agent(wt, analysis, model=args.model))

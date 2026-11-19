@@ -13,6 +13,7 @@ from app.agents.fix import (
     _git,
     _gradle,
     check_tool_call,
+    create_backtest_clone,
     create_worktree,
     validate_candidate,
 )
@@ -152,6 +153,36 @@ def test_worktree_is_isolated_from_the_main_checkout(repo, tmp_path):
     assert (
         repo / "android/app/src/main/java/com/vergeo/app/Gate.java"
     ).read_text() == "class Gate {}\n"
+
+
+def test_a_backtest_cannot_see_commits_after_its_base(repo, tmp_path):
+    base = sh(repo, "rev-parse", "HEAD").strip()
+    (repo / "android/app/src/main/java/com/vergeo/app/Gate.java").write_text("human fix\n")
+    sh(repo, "commit", "-qam", "fix(gate): the human answer")
+    answer = sh(repo, "rev-parse", "HEAD").strip()
+
+    wt = create_backtest_clone(repo, "b1", base, parent=tmp_path)
+    assert sh(wt.path, "rev-parse", "HEAD").strip() == base
+    assert sh(wt.path, "rev-parse", "--abbrev-ref", "HEAD").strip() == "fix-agent/b1"
+    assert answer not in sh(wt.path, "log", "--all", "--format=%H")
+    assert sh(wt.path, "remote").strip() == ""
+    with pytest.raises(subprocess.CalledProcessError):
+        sh(wt.path, "cat-file", "-e", answer)
+    assert sh(repo, "rev-parse", "HEAD").strip() == answer  # the source repo is untouched
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("fetch", "origin"),
+        ("fetch", "-q", "--no-tags", "https://example.com/r", "a" * 40 + ":refs/heads/fix-agent/x"),
+        ("fetch", "-q", "--no-tags", ".", "a" * 40 + ":refs/heads/master"),
+        ("init", "--bare", "x"),
+    ],
+)
+def test_the_workflow_fetches_only_one_local_commit_into_a_fix_branch(tmp_path, args):
+    with pytest.raises(PermissionError):
+        fix._git(tmp_path, *args)
 
 
 def candidate(repo, tmp_path, *, test_only_first=True, fix_commit=True) -> Worktree:
