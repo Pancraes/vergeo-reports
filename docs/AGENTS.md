@@ -173,6 +173,45 @@ The app sanitizes reports on the device. The agent layer does not rely on that:
 
 Results: see "Measured results" below.
 
+## Measured results
+
+One run of each, on the developer's own rides. Cases and reports are private; only aggregates
+are published.
+
+**Triage, blind, 20 historical rides (2026-11-18):** all 20 completed.
+
+| Field | Correct |
+|---|---|
+| verdict | 16/20 |
+| trigger path | 20/20 |
+| ride direction | 18/20 |
+| blackout reported (where labelled) | 16/17 |
+| failure class | 16/20 |
+
+- Doors-time error: median 5.5 s, max 53 s (n=6 rides with a doors lap).
+- Per ride: median 74 s wall time and 13 tool calls. Total cost $10.94 as reported by the SDK
+  (median $0.44).
+- All four verdict misses answered `insufficient_evidence` on rides without a doors lap.
+- Fix investigation was requested on 6 rides, all real past defects. It was requested on none of
+  the 6 rides that were late only because of a zero-signal blackout.
+
+**Fix agent, blind backtest, 1 defect (2026-11-19):** an early ARRIVAL ring, run from the commit
+before its human fix, in an isolated history.
+- **Run:** 47 turns, 599 s, $2.11, 0 denied calls.
+- **Validator:** accepted. The regression failed on an assertion at the base and passed with the
+  fix. The full suite went from 1,055 to 1,059 tests with 0 failures. All guard suites passed, and
+  22/22 historical replays passed.
+- **Human review against the human fix:**
+  - all six in-circle fixes of the incident are held;
+  - two genuine off-network arrivals from other rides still ring;
+  - a 125-point sweep near the destination gets no new hold.
+- **Difference:** the candidate is narrower than the human fix. It does not hold a separate older
+  false ring that the human fix also covers.
+- **Status:** not merged.
+
+n=1 for the fix agent: this shows the workflow works end to end, not a success rate. No manual
+baseline has been measured, so no time saving is claimed.
+
 ## Fix agent safety
 
 `python -m app.agents.fix --analysis <run>/result.json [--base <commit>] [--backtest]`
