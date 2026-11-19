@@ -192,8 +192,9 @@ are published.
 - Per ride: median 74 s wall time and 13 tool calls. Total cost $10.94 as reported by the SDK
   (median $0.44).
 - All four verdict misses answered `insufficient_evidence` on rides without a doors lap.
-- Fix investigation was requested on 6 rides, all real past defects. It was requested on none of
-  the 6 rides that were late only because of a zero-signal blackout.
+- Fix investigation was requested on 6 of the 8 rides labelled as software defects, and on no
+  other ride (0 false requests). That includes none of the 6 rides labelled as a known platform or
+  environmental limit. The two missed defects were answered as "no failure" and "unclear".
 
 **Fix agent, blind backtest, 1 defect (2026-11-19):** an early ARRIVAL ring, run from the commit
 before its human fix, in an isolated history.
